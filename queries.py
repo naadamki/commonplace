@@ -1,5 +1,5 @@
 # First, set up your session
-from models import Session, Quote, Category, Author
+from models import Session, Quote, Category, Author, User
 from sqlalchemy import func, or_, and_
 
 session = Session()
@@ -417,5 +417,265 @@ print_quotes(results)
 
 
 
-# Always close when done!
-session.close()
+def create_user(username, email, password, session=None):
+    """
+    Create a new user
+    
+    Args:
+        username: Unique username
+        email: Unique email address
+        password: Plain text password (will be hashed)
+        session: Optional database session
+    
+    Returns:
+        User object if successful, None if username/email already exists
+    """
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        # Check if username or email already exists
+        existing_user = session.query(User).filter(
+            or_(User.username == username, User.email == email)
+        ).first()
+        
+        if existing_user:
+            return None
+        
+        # Create new user
+        user = User(username=username, email=email)
+        user.set_password(password)
+        
+        session.add(user)
+        session.commit()
+        
+        return user
+    
+    except Exception as e:
+        session.rollback()
+        print(f"Error creating user: {e}")
+        return None
+    
+    finally:
+        if close_session:
+            session.close()
+
+
+def get_user_by_username(username, session=None):
+    """Get a user by username"""
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        return session.query(User).filter_by(username=username).first()
+    finally:
+        if close_session:
+            session.close()
+
+
+def get_user_by_email(email, session=None):
+    """Get a user by email"""
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        return session.query(User).filter_by(email=email).first()
+    finally:
+        if close_session:
+            session.close()
+
+
+def authenticate_user(username_or_email, password, session=None):
+    """
+    Authenticate a user with username/email and password
+    
+    Returns:
+        User object if authentication successful, None otherwise
+    """
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        # Try to find user by username or email
+        user = session.query(User).filter(
+            or_(User.username == username_or_email, User.email == username_or_email)
+        ).first()
+        
+        if user and user.check_password(password):
+            # Update last login
+            user.last_login = datetime.utcnow()
+            session.commit()
+            return user
+        
+        return None
+    
+    finally:
+        if close_session:
+            session.close()
+
+
+# ===== FAVORITES FUNCTIONS =====
+
+def add_favorite(user, quote_id, session=None):
+    """
+    Add a quote to user's favorites
+    
+    Args:
+        user: User object or user_id
+        quote_id: ID of the quote to favorite
+        session: Optional database session
+    
+    Returns:
+        True if added, False if already favorited or quote doesn't exist
+    """
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        # Get user if ID was passed
+        if isinstance(user, int):
+            user = session.query(User).filter_by(id=user).first()
+            if not user:
+                return False
+        
+        # Get quote
+        quote = session.query(Quote).filter_by(id=quote_id).first()
+        if not quote:
+            return False
+        
+        # Add to favorites
+        success = user.add_favorite(quote)
+        if success:
+            session.commit()
+        
+        return success
+    
+    finally:
+        if close_session:
+            session.close()
+
+
+def remove_favorite(user, quote_id, session=None):
+    """Remove a quote from user's favorites"""
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        # Get user if ID was passed
+        if isinstance(user, int):
+            user = session.query(User).filter_by(id=user).first()
+            if not user:
+                return False
+        
+        # Get quote
+        quote = session.query(Quote).filter_by(id=quote_id).first()
+        if not quote:
+            return False
+        
+        # Remove from favorites
+        success = user.remove_favorite(quote)
+        if success:
+            session.commit()
+        
+        return success
+    
+    finally:
+        if close_session:
+            session.close()
+
+
+def get_user_favorites(user, limit=None, session=None):
+    """
+    Get all favorite quotes for a user
+    
+    Args:
+        user: User object or user_id
+        limit: Optional limit on number of results
+        session: Optional database session
+    
+    Returns:
+        List of Quote objects
+    """
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        # Get user if ID was passed
+        if isinstance(user, int):
+            user = session.query(User).filter_by(id=user).first()
+            if not user:
+                return []
+        
+        favorites = user.favorite_quotes
+        
+        if limit:
+            return favorites[:limit]
+        
+        return favorites
+    
+    finally:
+        if close_session:
+            session.close()
+
+
+def is_quote_favorited(user, quote_id, session=None):
+    """Check if a user has favorited a specific quote"""
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        # Get user if ID was passed
+        if isinstance(user, int):
+            user = session.query(User).filter_by(id=user).first()
+            if not user:
+                return False
+        
+        # Get quote
+        quote = session.query(Quote).filter_by(id=quote_id).first()
+        if not quote:
+            return False
+        
+        return user.is_favorite(quote)
+    
+    finally:
+        if close_session:
+            session.close()
+
+
+def get_most_favorited_quotes(limit=10, session=None):
+    """Get the most favorited quotes across all users"""
+    close_session = False
+    if session is None:
+        session = get_session()
+        close_session = True
+    
+    try:
+        from sqlalchemy import desc
+        
+        # Query quotes with favorite counts
+        results = session.query(
+            Quote,
+            func.count(user_favorites.c.user_id).label('favorite_count')
+        ).outerjoin(user_favorites).group_by(Quote.id).order_by(desc('favorite_count')).limit(limit).all()
+        
+        return [{'quote': quote, 'favorites': count} for quote, count in results]
+    
+    finally:
+        if close_session:
+            session.close()
