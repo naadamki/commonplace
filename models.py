@@ -126,10 +126,9 @@ class Category(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
-    keywords = Column(Text)  # Store as JSON string
+    keywords = Column(Text)
     
-    # Relationship to quotes
-    quotes = relationship('Quote', secondary=quote_categories, back_populates='quotes')
+    quotes = relationship('Quote', secondary=quote_categories, back_populates='categories')
     
     def __repr__(self):
         return f"<Category(name='{self.name}')>"
