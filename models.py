@@ -14,9 +14,16 @@ quote_categories = Table('quote_categories', Base.metadata,
 )
 
 # Many-to-many relationship table for users and favorite quotes
-user_favorites = Table('user_favorites', Base.metadata,
+user_quote_favorites = Table('user_quote_favorites', Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id')),
     Column('quote_id', Integer, ForeignKey('quotes.id')),
+    Column('favorited_at', DateTime, default=datetime.utcnow)
+)
+
+# Many-to-many relationship table for users and favorite authors
+user_author_favorites = Table('user_author_favorites', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('author_id', Integer, ForeignKey('authors.id')),
     Column('favorited_at', DateTime, default=datetime.utcnow)
 )
 
@@ -31,8 +38,9 @@ class User(Base):
     last_login = Column(DateTime)
     is_active = Column(Boolean, default=True)
     
-    # Relationship to favorite quotes
-    favorite_quotes = relationship('Quote', secondary=user_favorites, backref='favorited_by')
+    # Relationships to favorites
+    favorite_quotes = relationship('Quote', secondary=user_quote_favorites, backref='favorited_by')
+    favorite_authors = relationship('Author', secondary=user_author_favorites, backref='favorited_by')
     
     def __repr__(self):
         return f"<User(username='{self.username}', email='{self.email}')>"
@@ -45,27 +53,52 @@ class User(Base):
         """Check if the provided password matches the hash"""
         return check_password_hash(self.password_hash, password)
     
-    def add_favorite(self, quote):
+    # Quote favorites
+    def add_favorite_quote(self, quote):
         """Add a quote to user's favorites"""
         if quote not in self.favorite_quotes:
             self.favorite_quotes.append(quote)
             return True
         return False
     
-    def remove_favorite(self, quote):
+    def remove_favorite_quote(self, quote):
         """Remove a quote from user's favorites"""
         if quote in self.favorite_quotes:
             self.favorite_quotes.remove(quote)
             return True
         return False
     
-    def is_favorite(self, quote):
+    def is_favorite_quote(self, quote):
         """Check if a quote is in user's favorites"""
         return quote in self.favorite_quotes
     
-    def get_favorites_count(self):
-        """Get total number of favorites"""
+    # Author favorites
+    def add_favorite_author(self, author):
+        """Add an author to user's favorites"""
+        if author not in self.favorite_authors:
+            self.favorite_authors.append(author)
+            return True
+        return False
+    
+    def remove_favorite_author(self, author):
+        """Remove an author from user's favorites"""
+        if author in self.favorite_authors:
+            self.favorite_authors.remove(author)
+            return True
+        return False
+    
+    def is_favorite_author(self, author):
+        """Check if an author is in user's favorites"""
+        return author in self.favorite_authors
+    
+    # Counts
+    def get_favorite_quotes_count(self):
+        """Get total number of favorite quotes"""
         return len(self.favorite_quotes)
+    
+    def get_favorite_authors_count(self):
+        """Get total number of favorite authors"""
+        return len(self.favorite_authors)
 
 class Author(Base):
     __tablename__ = 'authors'
@@ -83,6 +116,10 @@ class Author(Base):
     
     def __repr__(self):
         return f"<Author(id={self.id}, name='{self.name}')>"
+    
+    def get_favorites_count(self):
+        """Get how many users have favorited this author"""
+        return len(self.favorited_by)
 
 class Category(Base):
     __tablename__ = 'categories'
@@ -92,7 +129,7 @@ class Category(Base):
     keywords = Column(Text)  # Store as JSON string
     
     # Relationship to quotes
-    quotes = relationship('Quote', secondary=quote_categories, back_populates='categories')
+    quotes = relationship('Quote', secondary=quote_categories, back_populates='quotes')
     
     def __repr__(self):
         return f"<Category(name='{self.name}')>"
@@ -122,7 +159,9 @@ class Quote(Base):
     
     def __repr__(self):
         author_name = self.author.name if self.author else "Unknown"
-        return f"<Quote(id={self.id}, author='{author_name}')>"
+        text_preview = self.text[:30] + "..." if len(self.text) > 30 else self.text
+        text_preview = text_preview.replace('\n', ' ').replace('\r', ' ')
+        return f"<Quote(id={self.id}, author='{author_name}', text='{text_preview}')>"
     
     def get_tags(self):
         return json.loads(self.tags) if self.tags else []

@@ -3,7 +3,7 @@ Database access layer with managers for quotes, users, authors, and categories.
 Provides a clean OOP interface for all database operations.
 """
 
-from models import Session, Quote, Author, Category, User, user_favorites
+from models import Session, Quote, Category, User, Author, user_quote_favorites, user_author_favorites
 from sqlalchemy import or_, and_, func, desc
 from datetime import datetime
 import re
@@ -112,14 +112,29 @@ class QuoteManager:
         # Return just the quotes, limited
         return [quote for quote, score in scored_results[:limit]]
     
-    def random(self, category=None):
-        """Get a random quote, optionally from a specific category"""
+    def random(self, category=None, count=1):
+        """
+        Get random quote(s), optionally from a specific category
+        
+        Args:
+            category: Optional category name to filter by
+            count: Number of random quotes to return (default: 1)
+        
+        Returns:
+            Single Quote object if count=1, otherwise list of Quote objects
+        """
         query = self.session.query(Quote)
         
         if category:
             query = query.join(Quote.categories).filter(Category.name == category)
         
-        return query.order_by(func.random()).first()
+        query = query.order_by(func.random())
+        
+        # Return single quote or list based on count
+        if count == 1:
+            return query.first()
+        else:
+            return query.limit(count).all()
     
     def by_author(self, author_name, limit=None):
         """Get all quotes by an author (partial name match)"""
@@ -279,17 +294,22 @@ class UserManager:
 
 
 class FavoritesManager:
-    """Manager for user favorites operations"""
+    """Manager for user favorites operations (quotes and authors)"""
     
     def __init__(self, session):
         self.session = session
     
-    def add(self, user, quote_id):
+    def add(self, user, item_id, item_type='quote'):
         """
-        Add a quote to user's favorites
+        Add a quote or author to user's favorites
+        
+        Args:
+            user: User object or user_id
+            item_id: ID of the quote or author
+            item_type: 'quote' or 'author' (default: 'quote')
         
         Returns:
-            True if added, False if already favorited or quote doesn't exist
+            True if added, False if already favorited or item doesn't exist
         """
         # Get user if ID was passed
         if isinstance(user, int):
@@ -297,44 +317,114 @@ class FavoritesManager:
             if not user:
                 return False
         
-        # Get quote
-        quote = self.session.query(Quote).filter_by(id=quote_id).first()
-        if not quote:
-            return False
+        if item_type == 'quote':
+            quote = self.session.query(Quote).filter_by(id=item_id).first()
+            if not quote:
+                return False
+            
+            success = user.add_favorite_quote(quote)
+            if success:
+                self.session.commit()
+            return success
         
-        # Add to favorites
-        success = user.add_favorite(quote)
-        if success:
-            self.session.commit()
+        elif item_type == 'author':
+            author = self.session.query(Author).filter_by(id=item_id).first()
+            if not author:
+                return False
+            
+            success = user.add_favorite_author(author)
+            if success:
+                self.session.commit()
+            return success
         
-        return success
+        else:
+            raise ValueError(f"Invalid item_type: {item_type}. Must be 'quote' or 'author'")
     
-    def remove(self, user, quote_id):
-        """Remove a quote from user's favorites"""
+    def remove(self, user, item_id, item_type='quote'):
+        """
+        Remove a quote or author from user's favorites
+        
+        Args:
+            user: User object or user_id
+            item_id: ID of the quote or author
+            item_type: 'quote' or 'author' (default: 'quote')
+        
+        Returns:
+            True if removed, False if not favorited or item doesn't exist
+        """
         # Get user if ID was passed
         if isinstance(user, int):
             user = self.session.query(User).filter_by(id=user).first()
             if not user:
                 return False
         
-        # Get quote
-        quote = self.session.query(Quote).filter_by(id=quote_id).first()
-        if not quote:
-            return False
+        if item_type == 'quote':
+            quote = self.session.query(Quote).filter_by(id=item_id).first()
+            if not quote:
+                return False
+            
+            success = user.remove_favorite_quote(quote)
+            if success:
+                self.session.commit()
+            return success
         
-        # Remove from favorites
-        success = user.remove_favorite(quote)
-        if success:
-            self.session.commit()
+        elif item_type == 'author':
+            author = self.session.query(Author).filter_by(id=item_id).first()
+            if not author:
+                return False
+            
+            success = user.remove_favorite_author(author)
+            if success:
+                self.session.commit()
+            return success
         
-        return success
+        else:
+            raise ValueError(f"Invalid item_type: {item_type}. Must be 'quote' or 'author'")
     
-    def get_user_favorites(self, user, limit=None):
+    def is_favorited(self, user, item_id, item_type='quote'):
         """
-        Get all favorite quotes for a user
+        Check if a user has favorited a specific quote or author
+        
+        Args:
+            user: User object or user_id
+            item_id: ID of the quote or author
+            item_type: 'quote' or 'author' (default: 'quote')
         
         Returns:
-            List of Quote objects
+            True if favorited, False otherwise
+        """
+        # Get user if ID was passed
+        if isinstance(user, int):
+            user = self.session.query(User).filter_by(id=user).first()
+            if not user:
+                return False
+        
+        if item_type == 'quote':
+            quote = self.session.query(Quote).filter_by(id=item_id).first()
+            if not quote:
+                return False
+            return user.is_favorite_quote(quote)
+        
+        elif item_type == 'author':
+            author = self.session.query(Author).filter_by(id=item_id).first()
+            if not author:
+                return False
+            return user.is_favorite_author(author)
+        
+        else:
+            raise ValueError(f"Invalid item_type: {item_type}. Must be 'quote' or 'author'")
+    
+    def get(self, user, item_type='quote', limit=None):
+        """
+        Get all favorite quotes or authors for a user
+        
+        Args:
+            user: User object or user_id
+            item_type: 'quote' or 'author' (default: 'quote')
+            limit: Optional limit on number of results
+        
+        Returns:
+            List of Quote or Author objects
         """
         # Get user if ID was passed
         if isinstance(user, int):
@@ -342,37 +432,77 @@ class FavoritesManager:
             if not user:
                 return []
         
-        favorites = user.favorite_quotes
+        if item_type == 'quote':
+            favorites = user.favorite_quotes
+        elif item_type == 'author':
+            favorites = user.favorite_authors
+        else:
+            raise ValueError(f"Invalid item_type: {item_type}. Must be 'quote' or 'author'")
         
         if limit:
             return favorites[:limit]
         
         return favorites
     
-    def is_favorited(self, user, quote_id):
-        """Check if a user has favorited a specific quote"""
+    def count(self, user, item_type='quote'):
+        """
+        Get the count of a user's favorite quotes or authors
+        
+        Args:
+            user: User object or user_id
+            item_type: 'quote' or 'author' (default: 'quote')
+        
+        Returns:
+            Integer count of favorites
+        """
         # Get user if ID was passed
-        if isinstance(user, int):
-            user = self.session.query(User).filter_by(id=user).first()
-            if not user:
-                return False
-        
-        # Get quote
-        quote = self.session.query(Quote).filter_by(id=quote_id).first()
-        if not quote:
-            return False
-        
-        return user.is_favorite(quote)
-    
-    def count_user_favorites(self, user):
-        """Get the count of a user's favorites"""
         if isinstance(user, int):
             user = self.session.query(User).filter_by(id=user).first()
             if not user:
                 return 0
         
-        return user.get_favorites_count()
-
+        if item_type == 'quote':
+            return user.get_favorite_quotes_count()
+        elif item_type == 'author':
+            return user.get_favorite_authors_count()
+        else:
+            raise ValueError(f"Invalid item_type: {item_type}. Must be 'quote' or 'author'")
+    
+    def get_most(self, item_type='quote', limit=10):
+        """
+        Get the most favorited quotes or authors
+        
+        Args:
+            item_type: 'quote' or 'author' (default: 'quote')
+            limit: Number of results to return (default: 10)
+        
+        Returns:
+            List of dicts with 'quote'/'author' and 'favorites' keys
+        """
+        from sqlalchemy import desc, func
+        
+        if item_type == 'quote':
+            results = self.session.query(
+                Quote,
+                func.count(user_quote_favorites.c.user_id).label('favorite_count')
+            ).outerjoin(user_quote_favorites).group_by(Quote.id).order_by(
+                desc('favorite_count')
+            ).limit(limit).all()
+            
+            return [{'quote': quote, 'favorites': count} for quote, count in results]
+        
+        elif item_type == 'author':
+            results = self.session.query(
+                Author,
+                func.count(user_author_favorites.c.user_id).label('favorite_count')
+            ).outerjoin(user_author_favorites).group_by(Author.id).order_by(
+                desc('favorite_count')
+            ).limit(limit).all()
+            
+            return [{'author': author, 'favorites': count} for author, count in results]
+        
+        else:
+            raise ValueError(f"Invalid item_type: {item_type}. Must be 'quote' or 'author'")
 
 class AuthorManager:
     """Manager for Author queries and operations"""
