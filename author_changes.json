@@ -1,0 +1,93 @@
+{
+  "changes": [
+    {
+      "timestamp": "2025-12-31T14:36:36.055420",
+      "type": "MERGED",
+      "author_id": 18580,
+      "old_name": "Daniel Delgado F",
+      "new_name": "Daniel Delgado F.",
+      "merged_with": "Daniel Delgado F."
+    },
+    {
+      "timestamp": "2025-12-31T14:37:11.688405",
+      "type": "MERGED",
+      "author_id": 20431,
+      "old_name": "Belinda Taylor on \"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"Loss\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"",
+      "new_name": "Belinda Taylor",
+      "merged_with": "Belinda Taylor"
+    },
+    {
+      "timestamp": "2025-12-31T14:37:44.660133",
+      "type": "RENAMED",
+      "author_id": 20451,
+      "old_name": "\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"epey\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\" herher",
+      "new_name": "Herper (Epey)",
+      "merged_with": null
+    },
+    {
+      "timestamp": "2025-12-31T14:37:54.239513",
+      "type": "RENAMED",
+      "author_id": 20571,
+      "old_name": "Alliah \"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"Lenzkie\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\" Tabaya",
+      "new_name": "Alliah Tabaya (Lenzkie)",
+      "merged_with": null
+    },
+    {
+      "timestamp": "2025-12-31T14:38:28.303366",
+      "type": "MERGED",
+      "author_id": 21256,
+      "old_name": "Warhammer 40 000 Source Book",
+      "new_name": "Unknown",
+      "merged_with": "Unknown"
+    },
+    {
+      "timestamp": "2025-12-31T14:38:39.747741",
+      "type": "MERGED",
+      "author_id": 21417,
+      "old_name": "The Time !.",
+      "new_name": "Unknown",
+      "merged_with": "Unknown"
+    },
+    {
+      "timestamp": "2025-12-31T14:39:20.287008",
+      "type": "RENAMED",
+      "author_id": 22149,
+      "old_name": "De Ann \"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"Native\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\" Townes Jr.",
+      "new_name": "De Ann Townes Jr. (Native)",
+      "merged_with": null
+    },
+    {
+      "timestamp": "2025-12-31T14:39:31.895758",
+      "type": "RENAMED",
+      "author_id": 22334,
+      "old_name": "William \"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"Billy\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\" Packer",
+      "new_name": "William Packer (Billy)",
+      "merged_with": null
+    },
+    {
+      "timestamp": "2025-12-31T14:39:44.057539",
+      "type": "RENAMED",
+      "author_id": 23029,
+      "old_name": "A J.J. Graves",
+      "new_name": "A. J. J. Graves",
+      "merged_with": null
+    },
+    {
+      "timestamp": "2025-12-31T14:39:55.129124",
+      "type": "MERGED",
+      "author_id": 24021,
+      "old_name": "coolstoryreddit",
+      "new_name": "Unknown",
+      "merged_with": "Unknown"
+    },
+    {
+      "timestamp": "2025-12-31T14:41:56.120951",
+      "type": "MERGED",
+      "author_id": 24446,
+      "old_name": "books arm for life.",
+      "new_name": "Unknown",
+      "merged_with": "Unknown"
+    }
+  ],
+  "last_updated": "2025-12-31T14:41:56.121031"
+}
